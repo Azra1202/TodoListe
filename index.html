@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AP2 – FIAE – Karteikarten (schriftlich, 2025)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #020617;
+        --question-bg: radial-gradient(circle at top, #1f2937 0%, #111827 80%);
+        --answer-bg: radial-gradient(circle at top, #065f46 0%, #064e3b 80%);
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --radius: 1.5rem;
+        --duration: 0.5s;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(
+          circle at top,
+          #0f172a 0%,
+          #020617 55%,
+          #000 100%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        color: var(--text);
+        padding: 1.4rem;
+      }
+      .app {
+        width: min(1150px, 100%);
+        margin-inline: auto;
+      }
+      header {
+        margin-bottom: 1.2rem;
+      }
+      header h1 {
+        margin: 0;
+        font-size: clamp(1.5rem, 3vw, 2.3rem);
+        letter-spacing: -0.03em;
+      }
+      header p {
+        margin: 0.4rem 0 0.8rem;
+        color: var(--muted);
+        line-height: 1.4;
+        max-width: 62rem;
+      }
+      .meta {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        background: rgba(148, 163, 184, 0.12);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        padding: 0.15rem 0.7rem;
+        border-radius: 9999px;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .deck-switch {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.8rem;
+      }
+      .deck-label {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      .deck-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      .deck-btn {
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        color: var(--text);
+        border-radius: 0.9rem;
+        padding: 0.35rem 0.9rem;
+        font-weight: 600;
+      }
+      .deck-btn.is-active {
+        background: rgba(56, 189, 248, 0.25);
+        border-color: rgba(56, 189, 248, 0.8);
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+      }
+
+      .card-shell {
+        perspective: 1600px;
+        margin-bottom: 1.2rem;
+      }
+      .card {
+        width: 100%;
+        min-height: 280px;
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform var(--duration);
+        cursor: pointer;
+      }
+      .card.is-flipped {
+        transform: rotateY(180deg);
+      }
+      .card-face {
+        position: absolute;
+        inset: 0;
+        border-radius: var(--radius);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1.3rem 1.3rem 1.6rem;
+        backface-visibility: hidden;
+        box-shadow: 0 22px 40px rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(226, 232, 240, 0.04);
+      }
+      .front {
+        background: var(--question-bg);
+      }
+      .back {
+        background: var(--answer-bg);
+        transform: rotateY(180deg);
+      }
+      .card-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+      }
+      .question,
+      .answer {
+        font-size: 1rem;
+        line-height: 1.46;
+        white-space: pre-line;
+      }
+      .answer strong {
+        color: #fff;
+      }
+      .choices {
+        display: none;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 0.2rem;
+      }
+      .choice {
+        display: flex;
+        gap: 0.55rem;
+        align-items: flex-start;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        padding: 0.55rem 0.7rem;
+        border-radius: 0.9rem;
+      }
+      .choice-label {
+        width: 1.6rem;
+        height: 1.6rem;
+        border-radius: 50%;
+        background: rgba(56, 189, 248, 0.14);
+        border: 1px solid rgba(56, 189, 248, 0.5);
+        color: #e0f2fe;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      .controls {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+      }
+      button {
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        color: var(--text);
+        border-radius: 0.9rem;
+        padding: 0.5rem 1.1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      button:hover {
+        background: rgba(56, 189, 248, 0.22);
+        transform: translateY(-1px);
+      }
+      #progress {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      /* Responsive tweaks */
+      @media (max-width: 900px) {
+        .card {
+          min-height: 320px;
+        }
+        .question,
+        .answer {
+          font-size: 0.95rem;
+        }
+      }
+      @media (max-width: 650px) {
+        header p {
+          font-size: 0.87rem;
+        }
+        .app {
+          width: 100%;
+        }
+        .card {
+          min-height: 360px;
+        }
+        .controls {
+          flex-direction: column;
+        }
+        button {
+          width: 100%;
+          text-align: center;
+        }
+      }
+      @media (max-width: 430px) {
+        .card {
+          min-height: 420px;
+        }
+        .question,
+        .answer {
+          font-size: 0.9rem;
+        }
+        body {
+          padding: 0.8rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <h1>AP2 – Fachinformatiker Anwendungsentwicklung – Karteikarten</h1>
+        <p>
+          120 Fragen für die schriftliche Prüfung Ende 2025 (OOP, DB/SQL,
+          Web/REST, Security, UML, CI/CD, Cloud, Doku). Karte antippen →
+          Antwort. Buttons zum Blättern. Fragen kommen gemischt.
+        </p>
+        <div class="meta">
+          <span class="badge">Schriftlich: Herbst/Winter 2025</span>
+          <span class="badge">Responsive</span>
+          <span class="badge">Frage ≠ Antwort-Farbe</span>
+        </div>
+        <div class="deck-switch">
+          <span class="deck-label">Deck ausw?hlen:</span>
+          <div class="deck-buttons">
+            <button class="deck-btn is-active" data-deck="ap2" onclick="setDeck('ap2')">
+              Tech / AP2
+            </button>
+            <button class="deck-btn" data-deck="wiso" onclick="setDeck('wiso')">
+              WISO
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="card-shell">
+        <div class="card" id="card">
+          <div class="card-face front">
+            <div class="card-title">Frage</div>
+            <div class="question" id="question">…</div>
+            <div class="choices" id="choices"></div>
+          </div>
+          <div class="card-face back">
+            <div class="card-title">Antwort</div>
+            <div class="answer" id="answer">…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button onclick="prevCard()">← Zurück</button>
+        <button onclick="flipCard()">Antwort zeigen</button>
+        <button onclick="nextCard()">Weiter →</button>
+        <button onclick="randomCard()">🎲 Zufällig</button>
+      </div>
+      <div id="progress"></div>
+    </div>
+
+    <script>
+      // 120 prüfungsrelevante Karten
+      const cards = [
+        {
+          q: "1. Erklären Sie den Unterschied zwischen Compiler und Interpreter.",
+          a: "Ein Compiler übersetzt das komplette Programm VOR der Ausführung in Maschinencode (z. B. .exe). Syntaxfehler fallen dabei sofort auf. Die Ausführung ist später sehr schnell.\nEin Interpreter führt den Quellcode ZUR LAUFZEIT Zeile für Zeile aus. Das ist flexibel (schnell testen), aber meist langsamer.\nBeispiel: C wird kompiliert, Python wird interpretiert.",
+        },
+        {
+          q: "2. Was versteht man unter objektorientierter Programmierung? Nennen Sie vier Grundprinzipien.",
+          a: "OOP organisiert Programme in Klassen und Objekte, die Daten und Verhalten zusammenfassen.\nVier Grundprinzipien:\n1. Kapselung: Daten werden geschützt, Zugriff nur über definierte Methoden (z. B. private + Getter/Setter).\n2. Vererbung: Klassen können Verhalten/Eigenschaften anderer Klassen übernehmen (Code-Wiederverwendung).\n3. Polymorphie: Gleicher Aufruf, unterschiedliches Verhalten je nach Objekttyp (dynamische Bindung).\n4. Abstraktion: Nur das Wesentliche wird gezeigt, Details werden verborgen (z. B. Interfaces).",
+        },
+        {
+          q: "3. Was ist der Unterschied zwischen Klasse und Objekt?",
+          a: "Die Klasse ist die Definition/der Bauplan: welche Attribute und Methoden es gibt.\nDas Objekt ist die konkrete Ausprägung/Instanz dieser Klasse zur Laufzeit, also mit echten Werten.\nBeispiel: Klasse Kunde → Objekt Kunde mit name='Müller'.",
+        },
+        {
+          q: "4. Erklären Sie den Unterschied zwischen Vererbung und Schnittstellen.",
+          a: 'Vererbung: Unterklasse erweitert Oberklasse und übernimmt deren Implementierung → "ist-ein"-Beziehung (Admin ist ein User).\nSchnittstelle: spezifiziert nur Methoden-Signaturen, aber keine Implementierung → "kann"-Beziehung (Klasse kann druckbar sein).\nInterfaces ermöglichen Mehrfach-Implementierung, Vererbung meist nur einfach.',
+        },
+        {
+          q: "5. Was bedeutet Polymorphie? Geben Sie ein Beispiel.",
+          a: "Polymorphie bedeutet, dass dieselbe Methode je nach Objekttyp anders ausgeführt wird.\nBeispiel: Eine Methode zeichne() wird bei Klasse Kreis und Klasse Rechteck unterschiedlich umgesetzt. Im Code kann man beide über den gemeinsamen Typ (z. B. Form) ansprechen.",
+        },
+        {
+          q: "6. Wann ist eine Liste gegenüber einem Array vorteilhaft?",
+          a: "Wenn die Anzahl der Elemente zur Laufzeit variiert (hinzufügen/entfernen) oder häufig sortiert/umgebaut wird, ist eine Liste vorteilhaft (z. B. ArrayList, LinkedList).\nEin Array ist besser, wenn die Größe feststeht und sehr schneller Indexzugriff gebraucht wird.",
+        },
+        {
+          q: "7. Was ist der Unterschied zwischen Stack und Queue?",
+          a: "Stack: LIFO – das zuletzt eingelegte Element wird zuerst entnommen. Beispiel: Undo-Historie.\nQueue: FIFO – das zuerst eingelegte Element wird zuerst entnommen. Beispiel: Druckerwarteschlange.",
+        },
+        {
+          q: "8. Erklären Sie den Unterschied zwischen linearem und binärem Suchalgorithmus.",
+          a: "Lineare Suche: jedes Element nacheinander prüfen. Vorteil: funktioniert auch auf unsortierten Listen. Nachteil: langsam bei vielen Elementen (O(n)).\nBinäre Suche: setzt SORTIERTE Liste voraus, teilt den Suchraum immer in zwei Hälften. Sehr schnell (O(log n)).",
+        },
+        {
+          q: "9. Was ist der Unterschied zwischen einer HashMap und einer ArrayList?",
+          a: 'ArrayList: speichert Elemente geordnet, Zugriff über Index (0..n), gut zum Iterieren.\nHashMap: speichert Schlüssel-Wert-Paare, sehr schneller Zugriff über Schlüssel (z. B. map.get("id42")).\nDu nutzt eine HashMap, wenn du Dinge benennen/adressieren willst.',
+        },
+        {
+          q: "10. Was ist der Unterschied zwischen Syntax- und Laufzeitfehlern?",
+          a: "Syntaxfehler: Code verletzt Sprachregeln (z. B. fehlendes Semikolon, falsches Schlüsselwort). Programm lässt sich nicht kompilieren.\nLaufzeitfehler: Code ist syntaktisch korrekt, aber beim Ausführen tritt ein Fehler auf (z. B. Division durch 0, NullPointer).",
+        },
+        {
+          q: "11. Erklären Sie den Zweck von Unit-Tests.",
+          a: "Unit-Tests prüfen einzelne Klassen/Methoden isoliert.\nZweck: Fehler früh finden, späteres Refactoring absichern, automatisch prüfen können.\nBeispiel: Summe zweier Zahlen muss immer korrekt sein → Unit-Test prüft das.",
+        },
+        {
+          q: "12. Was ist Test-Driven Development (TDD)?",
+          a: "TDD = zuerst Test schreiben, dann Code schreiben, dann aufräumen.\nAblauf: Red (Test schlägt fehl) → Green (minimaler Code, Test grün) → Refactor (Code verbessern).\nVorteil: du programmierst genau das, was gefordert ist.",
+        },
+        {
+          q: "13. Was versteht man unter Mocking beim Testen?",
+          a: "Mocking heißt: abhängige Objekte (DB, E-Mail, API) werden durch Platzhalter ersetzt, die vorhersagbare Antworten liefern.\nSo testest du die eine Klasse unabhängig von der echten Umgebung.",
+        },
+        {
+          q: "14. Erklären Sie das Prinzip der Schichtenarchitektur.",
+          a: "Anwendung wird in Schichten mit klaren Verantwortlichkeiten geteilt:\n- Präsentation (UI)\n- Geschäftslogik\n- Datenzugriff\nDie obere Schicht kennt nur die nächste. Vorteil: Austauschbarkeit, Wartbarkeit, Tests.",
+        },
+        {
+          q: "15. Was ist ein Design Pattern? Nennen und beschreiben Sie zwei Beispiele.",
+          a: "Design Pattern = bewährte Entwurfsschablone für wiederkehrende Probleme.\nBeispiele:\n- Singleton: nur eine Instanz, global nutzbar (z. B. Logger).\n- Observer: mehrere Beobachter werden automatisch benachrichtigt (z. B. Event-System).",
+        },
+        {
+          q: "16. Was versteht man unter Modularisierung und warum ist sie wichtig?",
+          a: "Modularisierung = System in logisch zusammenhängende Teile zerlegen.\nWichtig: bessere Übersicht, unabhängige Entwicklung, Wiederverwendung, bessere Tests.\nBeispiel: Modul Authentifizierung, Modul Reporting.",
+        },
+        {
+          q: "17. Was ist der Unterschied zwischen monolithischer und serviceorientierter Architektur?",
+          a: "Monolith: alles in einer Anwendung, ein Deployment.\nService-/Microservice-Architektur: viele kleine Dienste mit klaren REST-Schnittstellen, getrennte Deployments, besser skalierbar.",
+        },
+        {
+          q: "18. Beschreiben Sie den Lebenszyklus eines Softwareprojekts nach dem Wasserfallmodell.",
+          a: "Phasen in fester Reihenfolge: Anforderungsanalyse → Design → Implementierung → Test → Einführung → Wartung. Jede Phase baut auf der vorherigen auf. Gut bei stabilen Anforderungen.",
+        },
+        {
+          q: "19. Wie unterscheidet sich das V-Modell vom Wasserfallmodell?",
+          a: "V-Modell ordnet jeder Entwicklungsphase eine Testphase zu (Design ↔ Integrationstest, Anforderungen ↔ Abnahmetest). Ziel: bessere Nachvollziehbarkeit und Qualität.",
+        },
+        {
+          q: "20. Was ist der Vorteil agiler Methoden wie Scrum?",
+          a: "Kurze Sprints, frühes Feedback, Änderungen können aufgenommen werden, engere Zusammenarbeit mit dem Kunden. Damit weniger Risiko, etwas Falsches zu bauen.",
+        },
+        {
+          q: "21. Erklären Sie den Unterschied zwischen Primärschlüssel und Fremdschlüssel.",
+          a: "Primärschlüssel: identifiziert einen Datensatz eindeutig in einer Tabelle.\nFremdschlüssel: verweist auf Primärschlüssel einer anderen Tabelle und stellt Relation her.\nBeispiel: bestellung.kunden_id → kunden.id",
+        },
+        {
+          q: "22. Was ist eine 1:n-Beziehung? Geben Sie ein Beispiel.",
+          a: "Ein Datensatz auf der 1-Seite gehört zu mehreren Datensätzen auf der n-Seite.\nBeispiel: 1 Kunde – n Bestellungen.\nIn SQL: Fremdschlüssel in der Bestellungen-Tabelle.",
+        },
+        {
+          q: "23. SQL: Geben Sie alle Kunden mit Wohnort „Berlin“ aus.",
+          a: "SELECT *\nFROM kunden\nWHERE wohnort = 'Berlin';",
+        },
+        {
+          q: "24. Wie erstellen Sie eine neue Tabelle mit einer automatischen ID?",
+          a: "CREATE TABLE kunden (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  name VARCHAR(100) NOT NULL\n);\n→ id wird automatisch hochgezählt.",
+        },
+        {
+          q: "25. Was ist der Unterschied zwischen INNER JOIN und LEFT JOIN?",
+          a: "INNER JOIN: nur Datensätze mit Treffer in beiden Tabellen.\nLEFT JOIN: alle Datensätze der linken Tabelle, rechts ggf. NULL.\nBeispiel: alle Kunden auch ohne Bestellung → LEFT JOIN.",
+        },
+        {
+          q: "26. Erklären Sie den Begriff Normalisierung und nennen Sie die ersten drei Normalformen.",
+          a: "Normalisierung reduziert Redundanzen und Anomalien.\n1. NF: nur atomare Werte\n2. NF: alle Nichtschlüsselattribute hängen voll vom Primärschlüssel ab\n3. NF: keine transitiven Abhängigkeiten zwischen Nichtschlüsselattributen.",
+        },
+        {
+          q: "27. Was ist der Unterschied zwischen GET- und POST-Anfragen im HTTP?",
+          a: "GET: liest Daten, Parameter in der URL, idempotent.\nPOST: sendet/erstellt Daten, Parameter im Body, nicht idempotent.\nBeispiel: GET /api/customers → Liste, POST /api/customers → neuen Kunden anlegen.",
+        },
+        {
+          q: "28. Was ist eine REST-API und wie wird sie angesprochen?",
+          a: "REST-API stellt Ressourcen über URLs bereit, nutzt HTTP-Methoden semantisch (GET, POST, PUT, DELETE) und liefert meist JSON zurück.\nBeispiel: GET /api/orders/5",
+        },
+        {
+          q: "29. Was ist JSON und wofür wird es verwendet?",
+          a: 'JSON = leichtgewichtiges Textformat für strukturierte Daten.\nWird für Datenaustausch zwischen Client und Server genutzt.\nBeispiel: { "id": 1, "name": "Müller" }',
+        },
+        {
+          q: "30. Erklären Sie den Unterschied zwischen Client-seitigem und Server-seitigem Rendering.",
+          a: "Client-seitig: Browser baut Inhalte per JS auf (SPA, React). Sehr interaktiv.\nServer-seitig: Server liefert fertiges HTML. Schneller First Load, SEO-freundlich.",
+        },
+        {
+          q: "31. Was ist XSS und wie kann man es verhindern?",
+          a: "XSS = eingeschleuster JavaScript-Code wird beim Opfer ausgeführt. Passiert oft durch ungefilterte Eingaben.\nVermeidung: Eingaben prüfen, Ausgaben escapen, CSP nutzen.",
+        },
+        {
+          q: "32. Was ist der Unterschied zwischen symmetrischer und asymmetrischer Verschlüsselung?",
+          a: "Symmetrisch: gleicher Schlüssel für Ver- und Entschlüsseln (schnell, aber Schlüsselverteilung schwer).\nAsymmetrisch: Schlüsselpaar (public/private). Verschlüsseln mit public, entschlüsseln mit private.",
+        },
+        {
+          q: "33. Welche Aufgaben erfüllt ein Zertifikat bei HTTPS?",
+          a: "Es bestätigt die Identität des Servers (vom CA unterschrieben) und wird für den Schlüsselaustausch genutzt, um eine verschlüsselte Verbindung aufzubauen.",
+        },
+        {
+          q: "34. Was ist eine Hashfunktion und wofür wird sie eingesetzt?",
+          a: "Hashfunktion bildet Daten auf einen festen Hashwert ab.\nEinsatz: Integritätsprüfung, Passwortspeicherung (mit Salt), Digitale Signaturen.",
+        },
+        {
+          q: "35. Nennen Sie drei Maßnahmen zur Absicherung einer Webanwendung.",
+          a: "1. Eingaben validieren und Prepared Statements\n2. HTTPS nutzen\n3. Rollen-/Rechtesystem und sichere Session-Verwaltung",
+        },
+        {
+          q: "36. Was bedeutet Datensparsamkeit nach DSGVO?",
+          a: 'Nur Daten erheben, die für den Zweck notwendig sind. Nicht "auf Vorrat" sammeln.\nBeispiel: Für Newsletter reicht E-Mail, Geburtsdatum ist unnötig.',
+        },
+        {
+          q: "37. Was versteht man unter Lastenheft und Pflichtenheft?",
+          a: "Lastenheft: WAS will der Auftraggeber? (Ziele, Anforderungen)\nPflichtenheft: WIE setzt der Auftragnehmer das um? (Technik, Architektur)",
+        },
+        {
+          q: "38. Welche Inhalte gehören in ein Pflichtenheft?",
+          a: "Ziele, Systemabgrenzung, funktionale Anforderungen, nichtfunktionale Anforderungen (Performance, Sicherheit), Datenmodell, Schnittstellen, Test/Abnahme-Kriterien.",
+        },
+        {
+          q: "39. Erklären Sie die SMART-Regel.",
+          a: 'Ziele sollen sein: Spezifisch, Messbar, Attraktiv/Akzeptiert, Realistisch, Terminiert.\nBeispiel: "Bis 31.12.25 Ladezeit unter 2s bei 100 Usern".',
+        },
+        {
+          q: "40. Was ist der Unterschied zwischen Aufwand und Kosten?",
+          a: "Aufwand = Zeit/Menge an Arbeit (z. B. 16 Stunden).\nKosten = Geld, das daraus entsteht (16h × 70 EUR = 1120 EUR).",
+        },
+        {
+          q: "41. Was ist ROI?",
+          a: "Return on Investment = (Gewinn – Investition) / Investition × 100%. Zeigt, ob sich ein Projekt wirtschaftlich lohnt.",
+        },
+        {
+          q: "42. Welche Phasen umfasst ein klassisches Projekt?",
+          a: "1. Initiierung\n2. Planung\n3. Durchführung\n4. Überwachung/Steuerung\n5. Abschluss (Doku, Übergabe)",
+        },
+        {
+          q: "43. Was ist CI/CD?",
+          a: "CI (Continuous Integration): häufiger Merge in zentrales Repo + automatisierte Builds/Tests.\nCD (Continuous Delivery/Deployment): geprüfter Code wird automatisiert bis in Test/Prod gebracht.",
+        },
+        {
+          q: "44. Welche Aufgaben übernimmt ein Build-Server?",
+          a: "Code holen, bauen, Tests ausführen, Artefakte erzeugen (z. B. Docker-Image), ggf. deployen, Reports erstellen.",
+        },
+        {
+          q: "45. Was versteht man unter Containerisierung?",
+          a: "Anwendung + Abhängigkeiten in einem Container verpacken (z. B. Docker), läuft überall gleich. Ideal für Deployment.",
+        },
+        {
+          q: "46. Unterschied VM und Container?",
+          a: "VM: eigenes OS, schwerer, langsamer Start.\nContainer: nutzt Host-Kernel, leicht, schnell, gut skalierbar.",
+        },
+        {
+          q: "47. Was ist Versionierung und warum wichtig?",
+          a: "Versionierung (Git) speichert Änderungen, ermöglicht Branches, Zusammenarbeit, Rollbacks. Ohne Versionierung keine saubere Entwicklung im Team.",
+        },
+        {
+          q: "48. Vorgehen: kleine Webanwendung planen, entwickeln, testen, bereitstellen.",
+          a: "1. Anforderungen & Datenmodell klären\n2. Backend mit REST (z. B. /api/kunden)\n3. Frontend bauen\n4. Tests (Unit, API)\n5. Deployment (Docker/Vercel)\n6. Monitoring/Logging aktivieren",
+        },
+        {
+          q: "49. Schritte, um eine DB mit einer Webanwendung zu verbinden.",
+          a: "DB-Connector einbinden → Connection konfigurieren → SQL/ORM nutzen → Daten abbilden → Fehler behandeln → Verbindung schließen.",
+        },
+        {
+          q: "50. Fehlersuche: Anwendung lädt keine Daten mehr.",
+          a: "1. DB erreichbar?\n2. Zugangsdaten/Passwort geprüft?\n3. SQL-Fehler im Log?\n4. Schema geändert?\n5. Letzte Codeänderung zurückrollen.",
+        },
+        {
+          q: "51. API sicher gestalten – Maßnahmen?",
+          a: "HTTPS, Authentifizierung (JWT/OAuth2), Autorisierung (Rollen), Eingabevalidierung, Rate-Limits, sinnvolle Statuscodes, Logging.",
+        },
+        {
+          q: "52. Wie Performance/Skalierbarkeit prüfen?",
+          a: "Lasttests, Monitoring (CPU/RAM/DB), langsame Queries optimieren, Caching, horizontale Skalierung testen.",
+        },
+        {
+          q: "53. Aufbau einer REST-Route mit Pfad- und Query-Params.",
+          a: "Beispiel: GET /api/customers/12/orders?status=open\n- /12 = Pfadparam (welcher Kunde?)\n- ?status=open = Query (Filtern)\nPfad = Identifikation, Query = Steuerung/Filter.",
+        },
+        {
+          q: "54. Zweck von Logging und Monitoring.",
+          a: "Logging: was ist wann passiert (Fehler, Logins, Requests)\nMonitoring: wie gut läuft das System (Latenz, Auslastung, Fehlerquote)\nZusammen: schneller Fehler finden.",
+        },
+        {
+          q: "55. Vier typische Web-Sicherheitsrisiken und Gegenmaßnahmen.",
+          a: "1. SQLi → Prepared Statements\n2. XSS → Ausgaben escapen\n3. CSRF → Token, SameSite\n4. MITM → HTTPS, HSTS",
+        },
+        {
+          q: "56. Was ist Kerberos?",
+          a: "Ticket-basiertes Authentifizierungsprotokoll, bei dem Passwörter nicht dauernd übertragen werden. Häufig in Domänen/AD.",
+        },
+        {
+          q: "57. Was ist ODBC?",
+          a: "Standardisierte Schnittstelle für DB-Zugriff. Anwendung muss nicht für jede DB angepasst werden.",
+        },
+        {
+          q: "58. Unterschied NAS und SAN.",
+          a: "NAS: dateibasiert, einfach, übers Netzwerk (SMB,NFS)\nSAN: blockbasiert, sehr performant, oft für Server/VMs",
+        },
+        {
+          q: "59. Nennen Sie wichtige Softwarequalitätsmerkmale.",
+          a: "Funktionalität, Zuverlässigkeit, Usability, Effizienz, Wartbarkeit, Portabilität, Sicherheit.",
+        },
+        {
+          q: "60. Was ist ein UML-Klassendiagramm?",
+          a: "Zeigt Klassen, Attribute, Methoden und Beziehungen. Wird genutzt, um Struktur zu planen oder Code daraus abzuleiten.",
+        },
+        {
+          q: "61. Was ist ein UML-Sequenzdiagramm?",
+          a: "Zeigt zeitlichen Ablauf der Nachrichten zwischen Objekten für einen Use Case (wer ruft wen in welcher Reihenfolge).",
+        },
+        {
+          q: "62. Unterschied Aggregation und Komposition.",
+          a: "Aggregation: schwache Ganze-Teil-Beziehung, Teil kann auch ohne Ganzes existieren.\nKomposition: starke Bindung, Teil existiert nur mit Ganzem (z. B. Bestellung – Position).",
+        },
+        {
+          q: "63. Wozu dient ein Aktivitätsdiagramm?",
+          a: "Zeigt Abläufe, Entscheidungen, Parallelität (z. B. Bestellprozess). Gut für Geschäftsprozesse.",
+        },
+        {
+          q: "64. Was ist MVC?",
+          a: "Model = Daten/Logik, View = Darstellung, Controller = Eingaben verarbeiten.\nTrennung erhöht Wartbarkeit und Wiederverwendung.",
+        },
+        {
+          q: "65. Was bedeutet „Security by Design“?",
+          a: "Sicherheit von Anfang an mitplanen: sichere Defaults, Validierung, Logging, Verschlüsselung – nicht erst am Ende nachrüsten.",
+        },
+        {
+          q: "66. Was ist ein API-Gateway?",
+          a: "Zentrale Komponente vor vielen Services. Macht Auth, Ratelimits, Routing, Protokollumwandlung. Entlastet die Microservices.",
+        },
+        {
+          q: "67. Wozu dient OpenAPI/Swagger?",
+          a: 'Formale Beschreibung der REST-API → Doku, Client/Server-Generierung, Tests. Wird oft in Aufgaben "Dokumentieren Sie die API" verlangt.',
+        },
+        {
+          q: "68. Was ist Idempotenz bei HTTP?",
+          a: "Mehrfacher Aufruf mit gleichen Daten führt zum gleichen Zustand.\nGET, PUT, DELETE sollen idempotent sein.",
+        },
+        {
+          q: "69. Einfache Sortierverfahren erklären.",
+          a: "Bubble: tauscht benachbarte Elemente\nSelection: sucht kleinstes und setzt nach vorn\nInsertion: fügt Element in sortierten Teil ein\n→ leicht zu verstehen, aber langsam.",
+        },
+        {
+          q: "70. Was ist Container-Orchestrierung?",
+          a: "Automatisches Verwalten vieler Container (Start, Restart, Scaling, Updates). Tool: Kubernetes.",
+        },
+        {
+          q: "71. Was gehört zum Konfigurationsmanagement?",
+          a: "Konfigurationselemente identifizieren, versionieren, Änderungen freigeben, Builds reproduzierbar machen.",
+        },
+        {
+          q: "72. Unterschied Continuous Delivery und Continuous Deployment.",
+          a: "Delivery: jederzeit releasefähig, Deploy manuell angestoßen.\nDeployment: geht automatisch nach Prod, wenn Tests ok.",
+        },
+        {
+          q: "73. Was ist ein DTO?",
+          a: "Data Transfer Object: nur Daten, keine Logik. Dient dazu, Daten zwischen Schichten/Diensten sauber zu übertragen.",
+        },
+        {
+          q: "74. Unterschied Authentifizierung und Autorisierung.",
+          a: "Authentifizierung: Wer bist du?\nAutorisierung: Was darfst du?\nBeispiel: Login vs. nur Admin darf löschen.",
+        },
+        {
+          q: "75. Wie verhindern Sie SQL-Injection?",
+          a: "Prepared Statements, Eingaben prüfen, keine String-Konkatenation, DB-Rechte einschränken.",
+        },
+        {
+          q: "76. Wichtige Security-Header nennen.",
+          a: "CSP, X-Content-Type-Options, X-Frame-Options/frame-ancestors, Strict-Transport-Security.",
+        },
+        {
+          q: "77. Wie sieht eine einfache JSON-Response aus?",
+          a: '{\n  "id": 7,\n  "title": "Ticket",\n  "status": "open"\n}\n+ Statuscode 200 oder 201.',
+        },
+        {
+          q: "78. Was ist Eventual Consistency?",
+          a: "In verteilten Systemen sind Daten kurzzeitig unterschiedlich, gleichen sich aber wieder an, wenn keine neuen Updates kommen.",
+        },
+        {
+          q: "79. Was ist ein Message-Broker?",
+          a: "Vermittelt Nachrichten zwischen Sender und Empfänger (asynchron). Entkoppelt Services. Z. B. RabbitMQ, Kafka.",
+        },
+        {
+          q: "80. Unterschied Black-Box- und White-Box-Test.",
+          a: "Black-Box: testet gegen Spezifikation, ohne Blick in den Code.\nWhite-Box: testet auch interne Pfade/Verzweigungen.",
+        },
+        {
+          q: "81. Was ist Clean Code? Nennen Sie zwei Regeln.",
+          a: "Lesbarer, einfacher, wartbarer Code.\nRegeln: sprechende Namen, kleine Funktionen, keine Duplikate, klare Verantwortung.",
+        },
+        {
+          q: "82. Vorgehen beim Debuggen einer API.",
+          a: "Request prüfen → Statuscodes prüfen → Serverlog ansehen → Daten validieren → Schichten einzeln testen (Service, DB).",
+        },
+        {
+          q: "83. Unterschied Client- und Server-seitige Validierung.",
+          a: "Client: bessere UX, aber nicht sicher.\nServer: immer nötig, weil Client umgehbar ist.",
+        },
+        {
+          q: "84. Welche HTTP-Statuscodes sollte man kennen?",
+          a: "200 OK, 201 Created, 204 No Content, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 409 Conflict, 500 Internal Server Error.",
+        },
+        {
+          q: "85. Ableiten von DB aus UML-Klassendiagramm.",
+          a: "Klasse → Tabelle, Attribut → Spalte, 1:n → FK in n-Tabelle, n:m → Zwischentabelle.",
+        },
+        {
+          q: "86. Wichtige Teile einer technischen Doku für die Prüfung.",
+          a: "Architektur, API-Endpunkte, Datenmodell, Installations-/Deploy-Schritte, Tests.",
+        },
+        {
+          q: "87. Zweck von Code Reviews.",
+          a: "Fehler finden, Sicherheit erhöhen, Wissen teilen, Code-Standards durchsetzen.",
+        },
+        {
+          q: "88. Warum ist Prepared Statement sicherer?",
+          a: "SQL und Daten getrennt → DB führt nur Parameter aus, kein eingeschleuster Code.",
+        },
+        {
+          q: "89. Welche Angaben muss eine API-Doku enthalten?",
+          a: "URL, Methode, Beschreibung, Parameter (Pfad, Query, Body), Beispiel-Request/Response, Statuscodes.",
+        },
+        {
+          q: "90. UML → Code: Vorgehen.",
+          a: "Für jede Klasse Klasse anlegen → Attribute + Sichtbarkeit übernehmen → Methoden anlegen → Vererbung über extends/implements → Assoziationen als Attribute/Liste.",
+        },
+
+        /* --- ab hier: 30 zusätzliche AP2-relevante Fragen (91–120) --- */
+
+        {
+          q: "91. Unterschied ER-Diagramm und UML-Klassendiagramm.",
+          a: "ERD kommt aus der Datenbankwelt, zeigt Entitäten, Attribute, Beziehungen (1:1, 1:n, n:m).\nUML-Klassendiagramm kommt aus OOP, zeigt Klassen mit Attributen, Methoden und Beziehungen (Assoziation, Vererbung).\nFür relationale DB-Aufgaben ist ERD üblicher, für Code UML.",
+        },
+        {
+          q: "92. Was ist ein Use-Case-Diagramm?",
+          a: "Es zeigt Akteure (Benutzer, Systeme) und deren Anwendungsfälle (Use Cases). Ziel: Überblick, wer was mit dem System macht.\nBeispiel: Akteur 'Kunde' → UC 'Bestellung aufgeben'.",
+        },
+        {
+          q: "93. Was bedeutet CRUD im Kontext von REST/DB?",
+          a: "CRUD = Create, Read, Update, Delete.\nIn REST oft: POST = Create, GET = Read, PUT/PATCH = Update, DELETE = Delete.\nIn DB: INSERT, SELECT, UPDATE, DELETE.",
+        },
+        {
+          q: "94. Nennen Sie wichtige HTTP-Header für APIs.",
+          a: "Content-Type (z. B. application/json), Accept, Authorization (z. B. Bearer Token), Cache-Control, Location (bei 201 Created).",
+        },
+        {
+          q: "95. Unterschied Cookie und Session.",
+          a: "Cookie: im Browser gespeichert, wird bei jedem Request mitgeschickt.\nSession: auf dem Server gespeichert, Browser bekommt nur die Session-ID (im Cookie). Session ist sicherer, weil Daten nicht im Client liegen.",
+        },
+        {
+          q: "96. Was ist CSRF und wie verhindert man es?",
+          a: "Cross-Site Request Forgery: Angreifer bringt Opfer dazu, im eingeloggten Zustand unerwünschte Requests zu senden.\nSchutz: CSRF-Token, SameSite-Cookies, ggf. Double-Submit-Cookies.",
+        },
+        {
+          q: "97. Unterschied Funktions-, Integrations-, System- und Abnahmetest.",
+          a: "Funktionstest: prüft einzelne Funktionen gegen Spezifikation.\nIntegrationstest: prüft Zusammenspiel von Komponenten.\nSystemtest: prüft komplettes System in Zielumgebung.\nAbnahmetest: Kunde prüft, ob Anforderungen erfüllt sind.",
+        },
+        {
+          q: "98. Welche Metriken für Codequalität gibt es?",
+          a: "LOC (Lines of Code), Zyklomatische Komplexität (wie viele Pfade), Testabdeckung (%), Code-Smells.\nZiel: zu große/komplizierte Methoden erkennen.",
+        },
+        {
+          q: "99. Was bedeutet ACID bei Datenbanken?",
+          a: "A – Atomicity: alles oder nichts\nC – Consistency: DB bleibt in gültigem Zustand\nI – Isolation: Transaktionen beeinflussen sich nicht gegenseitig\nD – Durability: nach Commit bleibt es gespeichert (auch nach Absturz).",
+        },
+        {
+          q: "100. Was ist eine Transaktion und warum ist sie wichtig?",
+          a: "Eine Transaktion fasst mehrere DB-Operationen zu einer logischen Einheit zusammen.\nWichtig, wenn mehrere Tabellen betroffen sind (z. B. Bestellung + Positionen) → entweder alles erfolgreich oder nichts.",
+        },
+        {
+          q: "101. Was ist ein Index in der Datenbank?",
+          a: "Ein Index ist eine zusätzliche Datenstruktur, die das schnelle Suchen/Filtern nach einer Spalte ermöglicht.\nNachteil: zusätzliche Speicher- und Pflegekosten beim Schreiben.",
+        },
+        {
+          q: "102. Was ist eine View?",
+          a: "Eine View ist eine gespeicherte SELECT-Abfrage und wird wie eine Tabelle benutzt.\nVorteil: komplexe Abfragen kapseln, Berechtigungen steuern.",
+        },
+        {
+          q: "103. Wozu können Stored Procedures genutzt werden?",
+          a: "Gespeicherte Prozeduren laufen auf dem DB-Server, z. B. zur Datenaufbereitung oder Validierung.\nVorteil: nah an den Daten, weniger Netzverkehr.\nNachteil: Logik verteilt (DB + Code).",
+        },
+        {
+          q: "104. Unterschied UTF-8 und ISO-8859-1.",
+          a: "UTF-8: Unicode, kann alle Zeichen vieler Sprachen codieren, Standard im Web.\nISO-8859-1: westeuropäisch, nur 256 Zeichen.\nFür Web/REST immer UTF-8.",
+        },
+        {
+          q: "105. Wie sollte eine REST-API Fehler zurückgeben?",
+          a: 'Mit passendem HTTP-Code (z. B. 400, 404, 409, 500) und einem JSON-Body mit Fehlercode + Beschreibung.\nBeispiel:\n{ "error": "VALIDATION", "message": "Feld name fehlt" }',
+        },
+        {
+          q: "106. Wie funktioniert Pagination in REST?",
+          a: "Große Listen werden in Seiten geliefert, z. B. GET /api/customers?page=2&size=20.\nResponse enthält oft zusätzlich Links/Infos zu next/prev.",
+        },
+        {
+          q: "107. Unterschied optimistisches und pessimistisches Locking.",
+          a: "Optimistisch: man geht davon aus, dass selten Konflikte auftreten. Beim Speichern wird Version geprüft.\nPessimistisch: Datensatz wird gesperrt, solange jemand bearbeitet. Verhindert Konflikte, aber weniger parallel.",
+        },
+        {
+          q: "108. Unterschied JSON und XML.",
+          a: "JSON: kompakt, für Web/JS ideal, einfach zu lesen.\nXML: stärker strukturiert, Namespaces, eher in älteren Enterprise-Systemen.\nAPIs heute meist JSON.",
+        },
+        {
+          q: "109. Was ist ein Build-Artefakt?",
+          a: "Das Ergebnis eines Builds: z. B. .jar, .war, Docker-Image, statisches HTML. Dieses Artefakt wird getestet und deployed.",
+        },
+        {
+          q: "110. Nennen Sie zwei Deployment-Strategien.",
+          a: "Blue-Green: zwei Umgebungen, neue Version auf Green, dann Traffic umschalten.\nRolling: neue Version wird schrittweise auf Knoten ausgerollt.\nVorteil: weniger Downtime.",
+        },
+        {
+          q: "111. Nennen Sie die drei Cloud-Service-Modelle.",
+          a: "IaaS: Infrastruktur (VMs, Storage) → z. B. AWS EC2\nPaaS: Plattform (Runtime, DB) → z. B. Heroku, AppEngine\nSaaS: fertige Anwendung → z. B. Office 365",
+        },
+        {
+          q: "112. Welche Backup-Strategien gibt es?",
+          a: "Vollbackup: alles sichern\nInkrementell: nur Änderungen seit letztem Backup\nDifferentiell: nur Änderungen seit letztem Vollbackup\nWichtig: Restore testen.",
+        },
+        {
+          q: "113. Erklären Sie RAID 0, 1 und 5 grob.",
+          a: "RAID 0: Striping, schnell, keine Redundanz\nRAID 1: Spiegelung, hohe Ausfallsicherheit, halber Speicher\nRAID 5: Striping + Parität, gute Mischung aus Sicherheit und Kapazität",
+        },
+        {
+          q: "114. Welche Logging-Level kennen Sie und wofür nutzt man sie?",
+          a: "DEBUG (sehr detailliert), INFO (normaler Ablauf), WARN (ungewöhnlich, aber geht), ERROR (Fehler), FATAL (schwerer Fehler).\nIn Prod meist INFO/WARN, bei Analyse DEBUG.",
+        },
+        {
+          q: "115. Was bedeutet „Least Privilege“?",
+          a: "Benutzer/Prozesse bekommen nur die minimal nötigen Rechte. Verringert Schaden bei Kompromittierung.\nBeispiel: Webapp darf nur SELECT/INSERT, nicht DROP TABLE.",
+        },
+        {
+          q: "116. Nennen Sie typische OWASP-Top-10-Themen.",
+          a: "Injection (SQL, LDAP), Broken Authentication, Sensitive Data Exposure, XSS, Security Misconfiguration, Broken Access Control.\nZiel: häufigste Web-Sicherheitslücken kennen.",
+        },
+        {
+          q: "117. Unterschied IPv4 und IPv6 im Web-Kontext.",
+          a: "IPv4: 32 Bit, knapp an Adressen, oft NAT.\nIPv6: 128 Bit, viel mehr Adressen, kein NAT nötig, moderne Netze.\nFür Web-Apps wichtig: Server sollte IPv6 können.",
+        },
+        {
+          q: "118. Was ist CORS und warum braucht man es?",
+          a: "Cross-Origin Resource Sharing: Browser-Sicherheitsmechanismus, der Zugriffe von einer Domain auf eine andere kontrolliert.\nREST-APIs müssen passende CORS-Header senden, sonst blockt der Browser.",
+        },
+        {
+          q: "119. Unterschied REST-Kommunikation und Message-Queue.",
+          a: "REST: synchron, Client wartet auf Antwort.\nMessage-Queue: asynchron, Sender legt Nachricht ab, Empfänger verarbeitet später.\nAsynchron gut für entkoppelte Systeme und Lastspitzen.",
+        },
+        {
+          q: "120. Warum sind Timeouts und Retry-Strategien wichtig?",
+          a: "Bei verteilten Systemen können Dienste langsam oder kurz weg sein. Mit Timeouts vermeidest du Hängenbleiben, mit Retries kannst du kurzzeitige Fehler ausgleichen. Wichtig für stabile APIs.",
+        },
+      ];
+
+      const wisoCards = [
+        {
+          q: "1. Mindestdauer der Probezeit im Ausbildungsverhältnis?",
+          options: ["2 Wochen", "1 Monat", "2 Monate", "6 Monate"],
+          a: "1 Monat",
+        },
+        {
+          q: "2. Maximale Probezeit im Ausbildungsverhältnis?",
+          options: ["2 Monate", "4 Monate", "6 Monate", "12 Monate"],
+          a: "4 Monate",
+        },
+        {
+          q: "3. Wie kann in der Probezeit gekündigt werden?",
+          options: [
+            "Nur schriftlich mit 2 Wochen Frist",
+            "Fristlos, jederzeit, ohne Angabe von Gründen",
+            "Nur betriebsbedingt",
+            "Nur nach Abmahnung",
+          ],
+          a: "Fristlos, jederzeit, ohne Angabe von Gründen",
+        },
+        {
+          q: "4. Wann endet das Ausbildungsverhältnis automatisch?",
+          options: [
+            "Mit Ablauf des Ausbildungsvertrags",
+            "Mit schriftlicher Kündigung",
+            "Mit Bestehen der Abschlussprüfung",
+            "Wenn der Betrieb es entscheidet",
+          ],
+          a: "Mit Bestehen der Abschlussprüfung",
+        },
+        {
+          q: "5. Was gehört NICHT in den Ausbildungsvertrag?",
+          options: [
+            "Beginn und Dauer",
+            "Probezeit",
+            "Urlaubstage",
+            "Gleitzeitregelungen",
+          ],
+          a: "Gleitzeitregelungen",
+        },
+        {
+          q: "6. Mindesturlaub nach JArbSchG für Jugendliche unter 18?",
+          options: ["20 Werktage", "23 Werktage", "25 Werktage", "28 Werktage"],
+          a: "25 Werktage",
+        },
+        {
+          q: "7. Pausenregel für Jugendliche bei mehr als 4,5 Stunden Arbeit?",
+          options: ["15 Minuten", "30 Minuten", "45 Minuten", "60 Minuten"],
+          a: "30 Minuten",
+        },
+        {
+          q: "8. Maximale tägliche Arbeitszeit für Jugendliche?",
+          options: ["6 Stunden", "7 Stunden", "8 Stunden", "9 Stunden"],
+          a: "8 Stunden",
+        },
+        {
+          q: "9. Darf ein Jugendlicher zwischen 20:00 und 6:00 Uhr arbeiten?",
+          options: [
+            "Ja, immer",
+            "Nein, grundsätzlich verboten",
+            "Ja, wenn er zustimmt",
+            "Nur mit ärztlichem Attest",
+          ],
+          a: "Nein, grundsätzlich verboten",
+        },
+        {
+          q: "10. Wer trägt die Ausbildungskosten?",
+          options: [
+            "Der Auszubildende",
+            "Die Berufsschule",
+            "Der Ausbildungsbetrieb",
+            "Die Agentur für Arbeit",
+          ],
+          a: "Der Ausbildungsbetrieb",
+        },
+        {
+          q: "11. Beispiel für betriebsbedingte Kündigung?",
+          options: [
+            "Diebstahl durch Mitarbeiter",
+            "Wiederholtes Zuspätkommen",
+            "Wegfall des Arbeitsplatzes",
+            "Beleidigung des Chefs",
+          ],
+          a: "Wegfall des Arbeitsplatzes",
+        },
+        {
+          q: "12. Wer hat besonderen Kündigungsschutz?",
+          options: [
+            "Alle Vollzeitkräfte",
+            "Schwangere, Schwerbehinderte, Betriebsräte, Azubis nach Probezeit",
+            "Teilzeitkräfte",
+            "Minijobber",
+          ],
+          a: "Schwangere, Schwerbehinderte, Betriebsräte, Azubis nach Probezeit",
+        },
+        {
+          q: "13. Für wen gilt das KSchG?",
+          options: [
+            "Ab 5 Mitarbeitern",
+            "Ab 8 Mitarbeitern",
+            "Ab mehr als 10 Mitarbeitern",
+            "Ab 20 Mitarbeitern",
+          ],
+          a: "Ab mehr als 10 Mitarbeitern",
+        },
+        {
+          q: "14. Befristeter Arbeitsvertrag endet …",
+          options: [
+            "mit ordentlicher Kündigung",
+            "automatisch mit Zeitablauf",
+            "nur durch Aufhebungsvertrag",
+            "mit Erreichen der Probezeit",
+          ],
+          a: "automatisch mit Zeitablauf",
+        },
+        {
+          q: "15. Kündigungsfrist nach 2 Jahren Betriebszugehörigkeit?",
+          options: [
+            "2 Wochen",
+            "1 Monat zum Monatsende",
+            "2 Monate zum Quartal",
+            "3 Monate zum Monatsende",
+          ],
+          a: "1 Monat zum Monatsende",
+        },
+        {
+          q: "16. Voraussetzung für ordentliche verhaltensbedingte Kündigung?",
+          options: [
+            "Keine Voraussetzung",
+            "Vorherige Abmahnung",
+            "Betriebsrat lehnt ab",
+            "Höchstens eine Abmahnung in 5 Jahren",
+          ],
+          a: "Vorherige Abmahnung",
+        },
+        {
+          q: "17. Beispiel für außerordentliche Kündigung?",
+          options: [
+            "Zuspätkommen",
+            "Schlechter Umsatz",
+            "Diebstahl",
+            "Wohnortwechsel",
+          ],
+          a: "Diebstahl",
+        },
+        {
+          q: "18. Wer wählt den Betriebsrat?",
+          options: [
+            "Nur Vollzeitkräfte",
+            "Alle Arbeitnehmer ab 16",
+            "Nur Abteilungsleiter",
+            "Nur Gewerkschaftsmitglieder",
+          ],
+          a: "Alle Arbeitnehmer ab 16",
+        },
+        {
+          q: "19. Wer ist in den Betriebsrat wählbar (passiv)?",
+          options: [
+            "Ab 16 Jahren",
+            "Ab 18 Jahren und 6 Monate im Betrieb",
+            "Nur Teamleiter",
+            "Nur Gewerkschaftsmitglieder",
+          ],
+          a: "Ab 18 Jahren und 6 Monate im Betrieb",
+        },
+        {
+          q: "20. Was stimmt zur JAV?",
+          options: [
+            "Kann ohne Betriebsrat existieren",
+            "Nur in Betrieben mit >500 Mitarbeitern",
+            "Braucht einen Betriebsrat",
+            "Nur für Ausbilder",
+          ],
+          a: "Braucht einen Betriebsrat",
+        },
+        {
+          q: "21. JAV: Bis welchem Alter aktiv wahlberechtigt?",
+          options: ["16", "17", "18", "21"],
+          a: "18",
+        },
+        {
+          q: "22. Wer schließt Betriebsvereinbarungen?",
+          options: [
+            "Gewerkschaft + Arbeitgeber",
+            "Betriebsrat + Arbeitgeber",
+            "Personalabteilung",
+            "Arbeitsagentur",
+          ],
+          a: "Betriebsrat + Arbeitgeber",
+        },
+        {
+          q: "23. Typischer Inhalt einer Betriebsvereinbarung?",
+          options: [
+            "Privatleben der Mitarbeitenden",
+            "Lohnsteuerklassen",
+            "Arbeitszeit- und Pausenregelungen",
+            "Produktauswahl",
+          ],
+          a: "Arbeitszeit- und Pausenregelungen",
+        },
+        {
+          q: "24. Aufgabe von Gewerkschaften?",
+          options: [
+            "Personal einstellen",
+            "Tarifverhandlungen führen",
+            "Bilanzen prüfen",
+            "Urlaubspläne schreiben",
+          ],
+          a: "Tarifverhandlungen führen",
+        },
+        {
+          q: "25. Wer schließt Tarifverträge ab?",
+          options: [
+            "Betriebsrat und Arbeitgeber",
+            "Arbeitnehmervertretung und Aufsichtsrat",
+            "Arbeitgeberverbände und Gewerkschaften",
+            "Bundesregierung",
+          ],
+          a: "Arbeitgeberverbände und Gewerkschaften",
+        },
+        {
+          q: "26. Was regelt ein Lohn- und Gehaltstarifvertrag?",
+          options: [
+            "Arbeitszeiten",
+            "Entgelthöhen",
+            "Urlaubsplanung",
+            "Hausordnung",
+          ],
+          a: "Entgelthöhen",
+        },
+        {
+          q: "27. Was regelt ein Manteltarifvertrag?",
+          options: [
+            "Firmenlogo",
+            "Produktpreise",
+            "Arbeitszeit, Urlaub, Kündigungsfristen",
+            "Dividende",
+          ],
+          a: "Arbeitszeit, Urlaub, Kündigungsfristen",
+        },
+        {
+          q: "28. Richtige Reihenfolge im Tarifkonflikt?",
+          options: [
+            "Verhandlungen → Streik → Urabstimmung → Zustimmung",
+            "Kündigung Tarifvertrag → Verhandlungen → Scheitern → Urabstimmung → Streik → Schlichtung → Zustimmung",
+            "Urabstimmung → Verhandlungen → Streik → Schlichtung",
+            "Streik → Kündigung Tarifvertrag → Zustimmung",
+          ],
+          a: "Kündigung Tarifvertrag → Verhandlungen → Scheitern → Urabstimmung → Streik → Schlichtung → Zustimmung",
+        },
+        {
+          q: "29. Wozu dient eine Urabstimmung?",
+          options: [
+            "Über Betriebsratswahlen entscheiden",
+            "Über Streik entscheiden",
+            "Über Lohnerhöhungen entscheiden",
+            "Über Einstellungen entscheiden",
+          ],
+          a: "Über Streik entscheiden",
+        },
+        {
+          q: "30. Wann sind Arbeitskämpfe (Streik) erlaubt?",
+          options: [
+            "Während laufender Tarifbindung",
+            "Nur bei Kurzarbeit",
+            "Wenn Tarifvertrag ausgelaufen ist",
+            "Immer mit Zustimmung des Chefs",
+          ],
+          a: "Wenn Tarifvertrag ausgelaufen ist",
+        },
+        {
+          q: "31. Streikteilnahme ist …",
+          options: [
+            "immer Vertragsbruch",
+            "rechtmäßig, wenn von Gewerkschaft organisiert",
+            "nur für Beamte erlaubt",
+            "nur in der Probezeit erlaubt",
+          ],
+          a: "rechtmäßig, wenn von Gewerkschaft organisiert",
+        },
+        {
+          q: "32. Marktform: viele Anbieter, viele Nachfrager?",
+          options: ["Monopol", "Oligopol", "Polypol", "Duopol"],
+          a: "Polypol",
+        },
+        {
+          q: "33. Marktform: wenige Anbieter, viele Nachfrager?",
+          options: ["Monopol", "Oligopol", "Polypol", "Kartell"],
+          a: "Oligopol",
+        },
+        {
+          q: "34. Marktform: ein Anbieter, viele Nachfrager?",
+          options: ["Monopol", "Oligopol", "Polypol", "Bilaterales Monopol"],
+          a: "Monopol",
+        },
+        {
+          q: "35. Kein Merkmal des vollkommenen Marktes?",
+          options: [
+            "Vollständige Markttransparenz",
+            "Homogene Güter",
+            "Viele Anbieter/Nachfrager",
+            "Heterogene Güter",
+          ],
+          a: "Heterogene Güter",
+        },
+        {
+          q: "36. Verkäufermarkt bedeutet?",
+          options: [
+            "Angebot > Nachfrage",
+            "Nachfrage > Angebot",
+            "Staatsmonopol",
+            "Es gibt keine Preise",
+          ],
+          a: "Nachfrage > Angebot",
+        },
+        {
+          q: "37. Phase mit negativem Wachstum und steigender Arbeitslosigkeit?",
+          options: ["Aufschwung", "Hochkonjunktur", "Abschwung/Rezession", "Depression"],
+          a: "Abschwung/Rezession",
+        },
+        {
+          q: "38. Konkurrierende Ziele im Unternehmen?",
+          options: [
+            "Kostensenkung und Qualitätserhöhung",
+            "Umsatzsteigerung und Marktanteil",
+            "Liquidität und Zahlungsfähigkeit",
+            "Kundenzufriedenheit und Service",
+          ],
+          a: "Kostensenkung und Qualitätserhöhung",
+        },
+        {
+          q: "39. Mindeststammkapital GmbH?",
+          options: ["5.000 €", "12.500 €", "25.000 €", "50.000 €"],
+          a: "25.000 €",
+        },
+        {
+          q: "40. Wer haftet bei der GmbH?",
+          options: [
+            "Geschäftsführer privat",
+            "Alle Gesellschafter unbegrenzt",
+            "Nur die GmbH mit Betriebsvermögen",
+            "Belegschaft",
+          ],
+          a: "Nur die GmbH mit Betriebsvermögen",
+        },
+        {
+          q: "41. Wer kann Geschäftsführer der GmbH sein?",
+          options: [
+            "Nur ein externer Manager",
+            "Auch ein Gesellschafter",
+            "Nur Notare",
+            "Nur Mitarbeiter ohne Anteile",
+          ],
+          a: "Auch ein Gesellschafter",
+        },
+        {
+          q: "42. Wo wird die GmbH eingetragen?",
+          options: ["Handelsregister A", "Handelsregister B", "Grundbuch", "Bundesanzeiger"],
+          a: "Handelsregister B",
+        },
+        {
+          q: "43. Was braucht der GmbH-Gesellschaftsvertrag?",
+          options: [
+            "E-Mail-Bestätigung",
+            "Formloser Handschlag",
+            "Notarielle Beurkundung",
+            "Mündliche Zustimmung",
+          ],
+          a: "Notarielle Beurkundung",
+        },
+        {
+          q: "44. Gewinnverteilung ohne Regelung erfolgt nach …",
+          options: [
+            "Kopfzahl",
+            "Stammeinlagenanteil",
+            "Leistungsbeurteilung",
+            "Dienstalter",
+          ],
+          a: "Stammeinlagenanteil",
+        },
+        {
+          q: "45. Träger der gesetzlichen Unfallversicherung?",
+          options: [
+            "Krankenkassen",
+            "Berufsgenossenschaften",
+            "Finanzamt",
+            "Bundesagentur für Arbeit",
+          ],
+          a: "Berufsgenossenschaften",
+        },
+        {
+          q: "46. Wegeunfall ist …",
+          options: [
+            "Unfall im Urlaub",
+            "Unfall auf direktem Arbeitsweg",
+            "Unfall auf Umwegen über Einkauf",
+            "Unfall am Wochenende",
+          ],
+          a: "Unfall auf direktem Arbeitsweg",
+        },
+        {
+          q: "47. Beitragsbemessungsgrenze bedeutet …",
+          options: [
+            "Mindestbeitrag zur KV",
+            "Obergrenze des Einkommens, bis zu der Beiträge berechnet werden",
+            "Maximaler Rentenbetrag",
+            "Steuerfreibetrag",
+          ],
+          a: "Obergrenze des Einkommens, bis zu der Beiträge berechnet werden",
+        },
+        {
+          q: "48. Generationenvertrag bedeutet …",
+          options: [
+            "Junge sparen für sich selbst",
+            "Aktive bezahlen Renten der heutigen Rentner",
+            "Rentner finanzieren Azubis",
+            "Nur der Staat zahlt Renten",
+          ],
+          a: "Aktive bezahlen Renten der heutigen Rentner",
+        },
+        {
+          q: "49. Erste Maßnahme im Brandfall?",
+          options: [
+            "Fenster schließen",
+            "Notruf/Alarmieren",
+            "E-Mails schreiben",
+            "Weglaufen ohne Info",
+          ],
+          a: "Notruf/Alarmieren",
+        },
+        {
+          q: "50. \"Blauer Engel\" bedeutet …",
+          options: [
+            "Luxusprodukt",
+            "Biolebensmittel",
+            "Umwelt- und schadstoffarme Produktion",
+            "CE-Kennzeichnung",
+          ],
+          a: "Umwelt- und schadstoffarme Produktion",
+        },
+        {
+          q: "51. Wieviele Zweige der Sozialversicherung?",
+          options: ["3", "4", "5", "6"],
+          a: "5 (KV, RV, AV, PV, UV)",
+        },
+        {
+          q: "52. Lohnfortzahlung im Krankheitsfall durch Arbeitgeber maximal …",
+          options: ["2 Wochen", "4 Wochen", "6 Wochen", "12 Wochen"],
+          a: "6 Wochen",
+        },
+        {
+          q: "53. Mutterschutzfrist vor der Geburt?",
+          options: ["2 Wochen", "4 Wochen", "6 Wochen", "8 Wochen"],
+          a: "6 Wochen",
+        },
+        {
+          q: "54. Mutterschutzfrist nach der Geburt (regulär)?",
+          options: ["4 Wochen", "6 Wochen", "8 Wochen", "12 Wochen"],
+          a: "8 Wochen (12 bei Früh-/Mehrlingen)",
+        },
+        {
+          q: "55. Maximale Elternzeit pro Kind?",
+          options: ["12 Monate", "18 Monate", "24 Monate", "36 Monate"],
+          a: "36 Monate",
+        },
+        {
+          q: "56. Übliche Steuerklasse für verheiratete Partner mit ähnlichem Einkommen?",
+          options: ["I", "II", "IV/IV", "V/VI"],
+          a: "IV/IV",
+        },
+        {
+          q: "57. Arbeitnehmeranteil Rentenversicherung (ca.)?",
+          options: ["4.5 %", "7.3 %", "9.3 %", "15 %"],
+          a: "9.3 %",
+        },
+        {
+          q: "58. Minderjähriger Azubi: Wer unterschreibt den Ausbildungsvertrag?",
+          options: [
+            "Nur der Azubi",
+            "Eltern/gesetzliche Vertreter",
+            "Nur die Berufsschule",
+            "Niemand",
+          ],
+          a: "Eltern/gesetzliche Vertreter",
+        },
+        {
+          q: "59. Wer überwacht Arbeitsschutz im Betrieb?",
+          options: [
+            "Krankenkasse",
+            "Gewerbeaufsichtsamt/Arbeitsschutzbehörde",
+            "Finanzamt",
+            "Stadtbibliothek",
+          ],
+          a: "Gewerbeaufsichtsamt/Arbeitsschutzbehörde",
+        },
+        {
+          q: "60. Was bedeutet Mitbestimmung nach BetrVG?",
+          options: [
+            "Chef entscheidet allein",
+            "Betriebsrat hat Anhörungsrecht ohne Einfluss",
+            "Betriebsrat hat gleichberechtigtes Zustimmungsrecht in sozialen Angelegenheiten",
+            "Nur Information, keine Rechte",
+          ],
+          a: "Betriebsrat hat gleichberechtigtes Zustimmungsrecht in sozialen Angelegenheiten",
+        },
+        {
+          q: "61. Kündigung des Ausbildungsverhältnisses nach Probezeit durch Ausbilder ist …",
+          options: [
+            "Mit 4 Wochen Frist möglich",
+            "Nur aus wichtigem Grund fristlos",
+            "Jederzeit ohne Grund",
+            "Nur schriftlich mit 1 Monat Frist",
+          ],
+          a: "Nur aus wichtigem Grund fristlos",
+        },
+        {
+          q: "62. Teilzeit während Elternzeit muss …",
+          options: [
+            "Nicht beantragt werden",
+            "7 Wochen vorher beantragt werden",
+            "Nur mündlich angekündigt werden",
+            "Nur 2 Tage vorher gemeldet werden",
+          ],
+          a: "7 Wochen vorher beantragt werden",
+        },
+        {
+          q: "63. Fachliche Eignung von Ausbildern heißt …",
+          options: [
+            "Nur pädagogische Schulung",
+            "Berufsabschluss + Berufspraxis + AEVO (AdA-Schein)",
+            "Nur Führungserfahrung",
+            "Nur Meistertitel",
+          ],
+          a: "Berufsabschluss + Berufspraxis + AEVO (AdA-Schein)",
+        },
+        {
+          q: "64. Was ist eine Abfindung?",
+          options: [
+            "Laufende Gehaltserhöhung",
+            "Einmalzahlung bei Beendigung (z. B. Aufhebungsvertrag/Klage)",
+            "Urlaubsgeld",
+            "Vermögenswirksame Leistung",
+          ],
+          a: "Einmalzahlung bei Beendigung (z. B. Aufhebungsvertrag/Klage)",
+        },
+        {
+          q: "65. Wirtschaftssubjekte im einfachen Wirtschaftskreislauf?",
+          options: [
+            "Unternehmen und Haushalte",
+            "Nur Unternehmen",
+            "Nur Staat",
+            "Banken allein",
+          ],
+          a: "Unternehmen und Haushalte",
+        },
+        {
+          q: "66. Inflationsziel der EZB (Preisniveaustabilität) liegt …",
+          options: [
+            "Bei 0 %",
+            "Knapp unter bzw. bei 2 %",
+            "Bei 5 %",
+            "Bei 10 %",
+          ],
+          a: "Knapp unter bzw. bei 2 %",
+        },
+        {
+          q: "67. Wer empfiehlt Anpassungen des gesetzlichen Mindestlohns?",
+          options: [
+            "Bundesagentur für Arbeit",
+            "Mindestlohnkommission",
+            "Finanzamt",
+            "IHK",
+          ],
+          a: "Mindestlohnkommission",
+        },
+        {
+          q: "68. Beispiel für privates Recht?",
+          options: ["BGB", "StGB", "AO", "GewO"],
+          a: "BGB",
+        },
+        {
+          q: "69. Dispositives Recht bedeutet …",
+          options: [
+            "Kann durch Vertrag abbedungen werden",
+            "Gilt immer zwingend",
+            "Gilt nur für Beamte",
+            "Gilt nur im Ausland",
+          ],
+          a: "Kann durch Vertrag abbedungen werden",
+        },
+        {
+          q: "70. Wer zahlt Beiträge zur Arbeitslosenversicherung?",
+          options: [
+            "Nur Arbeitgeber",
+            "Nur Arbeitnehmer",
+            "Arbeitgeber und Arbeitnehmer je zur Hälfte",
+            "Der Staat alleine",
+          ],
+          a: "Arbeitgeber und Arbeitnehmer je zur Hälfte",
+        },
+      ];
+
+      const decks = {
+        ap2: { name: "Tech / AP2", cards },
+        wiso: { name: "WISO", cards: wisoCards },
+      };
+
+      let activeDeck = "ap2";
+      let order = [];
+      let currentIndex = 0;
+
+      const cardEl = document.getElementById("card");
+      const qEl = document.getElementById("question");
+      const aEl = document.getElementById("answer");
+      const choicesEl = document.getElementById("choices");
+      const progEl = document.getElementById("progress");
+
+      function shuffleOrder() {
+        order = [...decks[activeDeck].cards.keys()];
+        order.sort(() => Math.random() - 0.5);
+      }
+
+      function updateDeckButtons() {
+        document.querySelectorAll(".deck-btn").forEach((btn) => {
+          btn.classList.toggle("is-active", btn.dataset.deck === activeDeck);
+        });
+      }
+
+      function renderCard(i) {
+        const deck = decks[activeDeck];
+        const card = deck.cards[order[i]];
+        qEl.textContent = card.q;
+        aEl.textContent = card.a;
+        if (choicesEl) {
+          if (card.options && card.options.length) {
+            choicesEl.innerHTML = card.options
+              .map(
+                (opt, idx) =>
+                  `<div class="choice"><span class="choice-label">${String.fromCharCode(
+                    65 + idx
+                  )}</span><span>${opt}</span></div>`
+              )
+              .join("");
+            choicesEl.style.display = "flex";
+          } else {
+            choicesEl.innerHTML = "";
+            choicesEl.style.display = "none";
+          }
+        }
+        progEl.textContent =
+          deck.name + " • " + (i + 1) + " / " + deck.cards.length + " Karten";
+        cardEl.classList.remove("is-flipped");
+      }
+
+      function nextCard() {
+        currentIndex = (currentIndex + 1) % order.length;
+        renderCard(currentIndex);
+      }
+      function prevCard() {
+        currentIndex = (currentIndex - 1 + order.length) % order.length;
+        renderCard(currentIndex);
+      }
+      function randomCard() {
+        currentIndex = Math.floor(Math.random() * order.length);
+        renderCard(currentIndex);
+      }
+      function flipCard() {
+        cardEl.classList.toggle("is-flipped");
+      }
+
+      function setDeck(key) {
+        if (!decks[key]) return;
+        activeDeck = key;
+        shuffleOrder();
+        currentIndex = 0;
+        renderCard(currentIndex);
+        updateDeckButtons();
+      }
+
+      let startX = null;
+      let startY = null;
+      let swipeConsumed = false;
+
+      cardEl.addEventListener("pointerdown", (event) => {
+        startX = event.clientX;
+        startY = event.clientY;
+        swipeConsumed = false;
+      });
+
+      cardEl.addEventListener("pointerup", (event) => {
+        if (startX === null || startY === null) return;
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+        if (Math.abs(dx) > 60 && Math.abs(dy) < 80) {
+          swipeConsumed = true;
+          if (dx < 0) {
+            nextCard();
+          } else {
+            prevCard();
+          }
+        }
+        startX = null;
+        startY = null;
+      });
+
+      cardEl.addEventListener("pointerleave", () => {
+        startX = null;
+        startY = null;
+      });
+
+      cardEl.addEventListener("click", () => {
+        if (swipeConsumed) {
+          swipeConsumed = false;
+          return;
+        }
+        flipCard();
+      });
+
+      shuffleOrder();
+      renderCard(currentIndex);
+      updateDeckButtons();
+    </script>
+  </body>
+</html>
